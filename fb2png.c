@@ -36,21 +36,32 @@
 #include <linux/fb.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <libgen.h>
 
 int main(int argc, char *argv[])
 {
     char *program = argv[0];
     char *fbdevice = "/dev/fb0";
     char *pngname = "fb.png";
+    char cgi_mode = 0;
+    char compression_level = 3;
 
+    if (!strcmp(basename(argv[0]), "fb2png.cgi")) {
+	    pngname = "-";
+	    cgi_mode = 1;
+    }
+    
     int opt = 0;
 
     //--------------------------------------------------------------------
 
-    while ((opt = getopt(argc, argv, "d:p:")) != -1)
+    while ((opt = getopt(argc, argv, "c:d:p:")) != -1)
     {
         switch (opt)
         {
+	   case 'c':
+		  compression_level = atoi(optarg);
+            break;
         case 'd':
 
             fbdevice = optarg;
@@ -64,7 +75,7 @@ int main(int argc, char *argv[])
         default:
 
             fprintf(stderr,
-                    "Usage: %s [-d device] [-p pngname]\n",
+                    "Usage: %s [-c compression_level] [-d device] [-p pngname]\n",
                     program);
             exit(EXIT_FAILURE);
             break;
@@ -170,14 +181,24 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    FILE *pngfp = fopen(pngname, "wb");
+    FILE *pngfp;
+    if (strcmp(pngname, "-")) {
+	    pngfp = fopen(pngname, "wb");
+    } else {
+	    pngfp = stdout;
+    }
 
     if (pngfp == NULL)
     {
         fprintf(stderr, "%s: Unable to create %s\n", program, pngname);
         exit(EXIT_FAILURE);
     }
-
+    
+    if (cgi_mode) {
+        fprintf(pngfp, "%s\n", "Content-Type: image/png");
+        fprintf(pngfp, "\n");
+    }
+    
     png_init_io(png_ptr, pngfp);
 
     png_set_IHDR(
@@ -190,6 +211,8 @@ int main(int argc, char *argv[])
         PNG_INTERLACE_NONE,
         PNG_COMPRESSION_TYPE_BASE,
         PNG_FILTER_TYPE_BASE);
+    
+    png_set_compression_level(png_ptr, compression_level);
 
     png_write_info(png_ptr, info_ptr);
 
