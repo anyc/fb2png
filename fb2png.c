@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
     //--------------------------------------------------------------------
 
-    int fbfd = open(fbdevice, O_RDWR);
+    int fbfd = open(fbdevice, O_RDONLY);
 
     if (fbfd == -1)
     {
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 
     void *memp = mmap(0,
                       finfo.smem_len,
-                      PROT_READ | PROT_WRITE,
+                      PROT_READ,
                       MAP_SHARED,
                       fbfd,
                       0);
